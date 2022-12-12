@@ -266,22 +266,14 @@ architecture behavior of snake_controller_v2 is
 
                     -- DEBUGGING
                     ld <= "0000000000";
-                    x <= "0000000000000000000000" & "0000000001";
+                    x <= X"ABCDABCD";
 
                 elsif (current_state = state1) then
                     -- wait for data
-
-                    -- DEBUGGING
-                    ld <= "0000000001";
-                    x <= "0000000000000000000000" & sDoutA;
   
                 elsif (current_state = state2) then
                     -- Clock tail block address into tempRegA
                     tempRegALd <= '1';
-
-                    -- DEBUGGING
-                    ld <= "0000000010";
-                    x <= "0000000000000000000000" & sDoutA;
 
                 elsif (current_state = state3) then
                     -- Valid Tail Block Address in tempRegA, write to temp tail
@@ -289,41 +281,21 @@ architecture behavior of snake_controller_v2 is
                     sDinB <= tempRegAout;
                     sWenB <= "1";
 
-                    -- DEBUGGING
-                    ld <= "0000000011";
-                    x <= "0000000000000000000000" & tempRegAout;
-
                 elsif (current_state = state3_1) then
                     sAddrA <= "0000000000"; -- Put head address on sRAM PORT A address bus
 
-                    -- DEBUGGING
-                    ld <= "0000000100";
-                    x <= "0000000000000000000000" & "0000000000";
-
                 elsif (current_state = state4) then
                     -- wait for data
-                
-                    -- DEBUGGING
-                    ld <= "0000000101";
-                    x <= "0000000000000000000000" & sDoutA;
 
                 elsif (current_state = state5) then
                     -- Clock head block address into tempRegA
                     tempRegALd <= '1';
-
-                    -- DEBUGGING
-                    ld <= "0000000110";
-                    x <= "0000000000000000000000" & sDoutA;
 
                 elsif (current_state = state6) then
                     -- Valid Head Block address in tempRegA, write to tail
                     sAddrB <= "0000000001";
                     sDinB <= tempRegAout;
                     sWenB <= "1";
-
-                    -- DEBUGGING
-                    ld <= "0000000111";
-                    x <= "0000000000000000000000" & tempRegAout;
                 
                 elsif (current_state = state7) then
                     -- Update Head Block address based on keyVal, write to head in sRAM
@@ -341,118 +313,63 @@ architecture behavior of snake_controller_v2 is
 
                     sWenb <= "1";
 
-                    -- DEBUGGING
-                    ld <= "0000001000";
-                    x <= "0000000000000000000000" & tempRegAout;
-
                 elsif (current_state = state8) then
                     -- Read new Head Block Address from sRAM
                     sAddrA <= "0000000000";
 
-                    -- DEBUGGING
-                    ld <= "0000001001";
-                    x <= "0000000000000000000000" & "0000000000";
-
                 elsif (current_state = state9) then
                     -- wait for data
-
-                    -- DEBUGGING
-                    ld <= "0000001010";
-                    x <= "0000000000000000000000" & sDoutA;
 
                 elsif (current_state = state10) then
                     -- Clock head block address into tempRegA
                     tempRegALd <= '1';
 
-                    -- DEBUGGING
-                    ld <= "0000001011";
-                    x <= "0000000000000000000000" & sDoutA;
-
                 elsif (current_state = state11) then
                     -- Valid Head Block address in tempRegA, put on gAddrA
                     gAddrA <= tempRegAout;
 
-                    -- DEBUGGING
-                    ld <= "0000001100";
-                    x <= "0000000000000000000000" & tempRegAout;
-
                 elsif (current_state = state12) then
                     -- wait for gData
-
-                    -- DEBUGGING
-                    ld <= "0000001101";
-                    x <= "000000000000000000000000000000" & gDoutA;
 
                 elsif (current_state = state13) then
                     -- Clock gData into tempRegC
                     tempRegCLd <= '1';
 
-                    -- DEBUGGING
-                    ld <= "0000001110";
-                    x <= "000000000000000000000000000000" & gDoutA;
-
                 elsif (current_state = state14) then
                     -- Valid data in tempRegC; decide what to do next
-
-                    -- DEBUGGING
-                    ld <= "0000001111";
-                    x <= "000000000000000000000000000000" & tempRegCout;
 
                 elsif (current_state = state15) then
                     -- MOVE NORMAL, start updating board at head
                     gDinA <= "01";
                     gRAMA_WEN <= "1";
 
-                    -- DEBUGGING
-                    ld <= "0000010000";
-                    x <= X"0000000" & X"F";
-
                 elsif (current_state = state15_1) then
                     -- Get old tail block address
                     sAddrA <= "0000000010";
 
-                    -- DEBUGGING
-                    ld <= "0000010000";
-                    x <= X"0000000" & X"F";
-
                 elsif (current_state = state15_2) then
                     -- wait for data
-
-                    -- DEBUGGING
-                    ld <= "0000010000";
-                    x <= X"0000000" & X"F";
 
                 elsif (current_state = state15_3) then
                     -- Clock data into tempRegA
                     tempRegALd <= '1';
-
-                    -- DEBUGGING
-                    ld <= "0000010000";
-                    x <= "0000000000000000000000" & tempRegAout;
 
                 elsif (current_state = state15_4) then
                     -- valid data in tempRegA, put on gAddrA and clear contents
                     gAddrA <= tempRegAout;
                     gDinA <= "00";
                     gRAMA_WEN <= "1";
-
-                    -- DEBUGGING
-                    ld <= "0000010000";
-                    x <= "0000000000000000000000" & tempRegAout;
                 
                 elsif (current_state = state16) then
                     -- APPLE!
-
-                    -- DEBUGGING
-                    ld <= "0000010001";
-                    x <= X"000000" & X"10";
 
                 elsif (current_state = state17) then
                     -- GAME OVER
 
                     -- DEBUGGING
                     ld <= "0000010010";
-                    x <= X"000000" & X"11";
+                    -- x <= X"000000" & X"11";
+                    x <= X"DEADBEEF";
 
                 elsif (current_state = waitForgClk) then
 
