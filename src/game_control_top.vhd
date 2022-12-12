@@ -15,36 +15,54 @@ entity gm_contrl_top is
         green   : out STD_LOGIC_VECTOR (2 downto 0);
         blue    : out STD_LOGIC_VECTOR (1 downto 0);
         hsync   : out STD_LOGIC;
-        vsync   : out STD_LOGIC
+        vsync   : out STD_LOGIC;
+
+        -- DEBUGGING
+        a_to_g  : out STD_LOGIC_VECTOR (6 downto 0);
+        an      : out STD_LOGIC_VECTOR (7 downto 0);
+        dp      : out STD_LOGIC
     );
 end gm_contrl_top;
 
 architecture Behavioral of gm_contrl_top is
 
-    signal cclk, gclk, vidon1, appleflg   : STD_LOGIC;
+    signal vidon1, appleflg   : STD_LOGIC;
     signal sweb1, gweb1, gwea1, swea1 :STD_LOGIC_VECTOR(0 downto 0);
     signal gdoutb1, gdinb1, gdina1, gdouta1 :STD_LOGIC_VECTOR(1 downto 0);
     signal key, snake_address, snake_data, blank_address, blank_data, apple_address, apple_data, border_address, border_data :STD_LOGIC_VECTOR(7 downto 0);
     signal sdouta1, snake_cnt_out, saddrb1, sdinb1, gaddrb1, saddra1, gaddra1, sdina1, sdoutb1, hc1, vc1 :STD_LOGIC_VECTOR(9 downto 0);
 
+    signal cClk     : STD_LOGIC;
+    signal gClk     : STD_LOGIC;
+    signal keyVal   : STD_LOGIC_VECTOR (7 downto 0);
+
+    -- gRAM signals
+    signal gAddrB   : STD_LOGIC_VECTOR (9 downto 0);
+    signal gDoutB   : STD_LOGIC_VECTOR (1 downto 0);
+    signal gDinB    : STD_LOGIC_VECTOR (1 downto 0);
+    signal gWenB    : STD_LOGIC_VECTOR (0 downto 0);
+
+    -- DEBUGGING
+    signal x_disp       : STD_LOGIC_VECTOR (31 downto 0);
+    -- DEBUGGING
 
     component ClkDiv
         port(
-            mclk : in STD_LOGIC;
-            clr : in STD_LOGIC;
-            clk25 : out STD_LOGIC;
-            clk6 : out STD_LOGIC
+            mclk    : in STD_LOGIC;
+            clr     : in STD_LOGIC;
+            clk25   : out STD_LOGIC;
+            clk6    : out STD_LOGIC
         );
     end component;
 
     component keyboard_ctrl
         port(
-            clk25 : in STD_LOGIC;
-            clr : in STD_LOGIC;
-            PS2C : in STD_LOGIC;
-            PS2D : in STD_LOGIC;
-            keyval1: out STD_LOGIC_VECTOR(7 downto 0);
-            keyval2: out STD_LOGIC_VECTOR(7 downto 0);
+            clk25   : in STD_LOGIC;
+            clr     : in STD_LOGIC;
+            PS2C    : in STD_LOGIC;
+            PS2D    : in STD_LOGIC;
+            keyval1 : out STD_LOGIC_VECTOR(7 downto 0);
+            keyval2 : out STD_LOGIC_VECTOR(7 downto 0);
             keyval3 : out STD_LOGIC_VECTOR(7 downto 0)
         );
     end component;
@@ -96,221 +114,179 @@ architecture Behavioral of gm_contrl_top is
         );
     end component;
 
-    component snake_controller
+    component snake_controller_v2 is
         port (
-            clk25           : in STD_LOGIC;
-            clk6            : in STD_LOGIC;
-            clr             : in STD_LOGIC;
-            go              : in STD_LOGIC;
+            -- Inputs
+            clr     : in STD_LOGIC;
+            clk     : in STD_LOGIC;
+            gClk    : in STD_LOGIC;
+    
+            keyVal  : in STD_LOGIC_VECTOR (7 downto 0);
+            gDoutA  : in STD_LOGIC_VECTOR (1 downto 0);
+    
+            -- Outputs
+            gAddrA  : out STD_LOGIC_VECTOR (9 downto 0);
+            gDinA   : out STD_LOGIC_VECTOR (1 downto 0);
+            gWenA   : out STD_LOGIC_VECTOR (0 downto 0);
 
-            keyval          : in STD_LOGIC_VECTOR(7 downto 0); -- from keyboard
-            gdoutb          : in STD_LOGIC_VECTOR(1 downto 0); -- game data out
-            sdouta          : in STD_LOGIC_VECTOR(9 downto 0); -- snake data out
-            sdoutb          : in STD_LOGIC_VECTOR(9 downto 0); -- snake data out
-            snake_count_out : in STD_LOGIC_VECTOR(9 downto 0); -- Length of snake
-
-            ld              : out STD_LOGIC_VECTOR (9 downto 0);
-            appleflgout     : out STD_LOGIC; -- increment score
-            blankflgout     : out STD_LOGIC; -- if nothing is there
-            gameoverflgout  : out STD_LOGIC;
-            sweb            : out STD_LOGIC_VECTOR(0 DOWNTO 0); -- snake write enable port b
-            gweb            : out STD_LOGIC_VECTOR(0 DOWNTO 0);-- game write enable b
-            gdinb           : out STD_LOGIC_VECTOR(1 downto 0); -- game data in on b
-            saddrb          : out STD_LOGIC_VECTOR(9 downto 0); -- snake address port b
-            sdinb           : out STD_LOGIC_VECTOR(9 downto 0); -- snake data in port b
-            gaddrb          : out STD_LOGIC_VECTOR(9 downto 0); -- game address port b
-            saddra          : out STD_LOGIC_VECTOR(9 downto 0)  -- snake address port a
+            -- DEBUGGING
+            ld      : out STD_LOGIC_VECTOR (9 downto 0);
+            x       : out STD_LOGIC_VECTOR (31 downto 0)
         );
     end component;
 
-    component ireg
-        port ( 
-            d   : in STD_LOGIC_VECTOR (9 downto 0);
-            clr : in STD_LOGIC;
-            clk : in STD_LOGIC;
-            flg : in STD_LOGIC;
-            q   : out STD_LOGIC_VECTOR (9 downto 0)
+    -- DEBUGGING
+    component x7segb8 is
+        port(
+            x       : in STD_LOGIC_VECTOR(31 downto 0);
+            clk     : in STD_LOGIC;
+            clr     : in STD_LOGIC;
+            a_to_g  : out STD_LOGIC_VECTOR(6 downto 0);
+            an      : out STD_LOGIC_VECTOR(7 downto 0);
+            dp      : out STD_LOGIC
         );
     end component;
+    -- DEBUGGING
 
     component gRAM
         PORT (
-            clka : IN STD_LOGIC;
-            wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-            addra : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            dina : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
-            douta : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
-            clkb : IN STD_LOGIC;
-            web : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-            addrb : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            dinb : IN STD_LOGIC_VECTOR(1 DOWNTO 0);
-            doutb : OUT STD_LOGIC_VECTOR(1 DOWNTO 0)
-        );
-    end component;
+            -- Port A
+            clka    : in STD_LOGIC;
+            wea     : in STD_LOGIC_VECTOR(0 DOWNTO 0);
+            addra   : in STD_LOGIC_VECTOR(9 DOWNTO 0);
+            dina    : in STD_LOGIC_VECTOR(1 DOWNTO 0);
+            douta   : out STD_LOGIC_VECTOR(1 DOWNTO 0);
 
-    component sRAM
-        PORT (
-            clka : IN STD_LOGIC;
-            wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-            addra : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            dina : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            douta : OUT STD_LOGIC_VECTOR(9 DOWNTO 0);
-            clkb : IN STD_LOGIC;
-            web : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
-            addrb : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            dinb : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-            doutb : OUT STD_LOGIC_VECTOR(9 DOWNTO 0)
+            -- Port B
+            clkb    : in STD_LOGIC;
+            web     : in STD_LOGIC_VECTOR(0 DOWNTO 0);
+            addrb   : in STD_LOGIC_VECTOR(9 DOWNTO 0);
+            dinb    : in STD_LOGIC_VECTOR(1 DOWNTO 0);
+            doutb   : out STD_LOGIC_VECTOR(1 DOWNTO 0)
         );
     end component;
 
     component snake_sprite
         PORT (
-            clka : IN STD_LOGIC;
-            addra : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-            douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+            clka    : in STD_LOGIC;
+            addra   : in STD_LOGIC_VECTOR(7 DOWNTO 0);
+            douta   : out STD_LOGIC_VECTOR(7 DOWNTO 0)
         );
     end component;
 
     component apple_sprite
         PORT (
-            clka : IN STD_LOGIC;
-            addra : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-            douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+            clka    : in STD_LOGIC;
+            addra   : in STD_LOGIC_VECTOR(7 DOWNTO 0);
+            douta   : out STD_LOGIC_VECTOR(7 DOWNTO 0)
         );
     end component;
 
     component border_sprite
         PORT (
-            clka : IN STD_LOGIC;
-            addra : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-            douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+            clka    : in STD_LOGIC;
+            addra   : in STD_LOGIC_VECTOR(7 DOWNTO 0);
+            douta   : out STD_LOGIC_VECTOR(7 DOWNTO 0)
         );
     end component;
 
     component blank_sprite
         PORT (
-            clka : IN STD_LOGIC;
-            addra : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
-            douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+            clka    : in STD_LOGIC;
+            addra   : in STD_LOGIC_VECTOR(7 DOWNTO 0);
+            douta   : out STD_LOGIC_VECTOR(7 DOWNTO 0)
         );
     end component;
 
     begin
 
-    snake_cnt_out<="0000000010";
-    --key<= X"75";
-
-    controller: snake_controller 
+    controller : snake_controller_v2
         port map (
-            clk25 => cclk,
-            clk6 => gclk,
-            clr => btn(3),       
-            go => btn(1),           
-            keyval => key,
-            gdoutb => gdoutb1,
-            sdouta => sdouta1,
-            sdoutb=> sdoutb1,
-            snake_count_out => snake_cnt_out,
-            ld => ld,
-            appleflgout => appleflg,
-            blankflgout => open,
-            gameoverflgout  => open, 
-            sweb => sweb1,
-            gweb => gweb1,
-            gdinb => gdinb1,
-            saddrb => saddrb1,
-            sdinb => sdinb1,
-            gaddrb => gaddrb1,
-            saddra => saddra1
+            -- Inputs
+            clr     => btn(3),
+            clk => cclk,
+            --clk     => btn(2),
+            gclk    => gClk,
+            keyVal  => keyVal,
+            gDoutA  => gDoutB,
+
+            -- Outputs
+            gAddrA  => gAddrB,
+            gDinA   => gDinB,
+            gWenA   => gWenB,
+
+            -- DEBUGGING
+            ld      => ld,
+            x       => x_disp
         );
 
     kbunit: keyboard_ctrl 
         port map (
-            clk25 => cclk,
-            clr => btn(3),
-            PS2C => PS2C,
-            PS2D => PS2D,
+            clk25   => cclk,
+            clr     => btn(3),
+            PS2C    => PS2C,
+            PS2D    => PS2D,
             keyval1 => open,
-            keyval2 => key,
+            keyval2 => keyVal,
             keyval3 => open
         );
 
     clkdivunit1: ClkDiv 
         port map (
-            mclk => mclk,
-            clr => btn(3),
-            clk25 => cclk,
-            clk6 => gclk
+            mclk    => mclk,
+            clr     => btn(3),
+            clk25   => cClk,
+            clk6    => gClk
         );
 		 
     game_ram: gRAM 
-        port map (	 
-            clka => cclk,
-            wea => gwea1,
-            addra => gaddra1,
-            dina => gdina1,
-            douta => gdouta1,
-            clkb => cclk,
-            web => gweb1,
-            addrb => gaddrb1,
-            dinb => gdinb1,
-            doutb => gdoutb1
-        );
+        port map (
+            -- Port A	 
+            clka    => cClk,
+            wea     => gwea1,
+            addra   => gaddra1,
+            dina    => gdina1,
+            douta   => gdouta1,
 
-    snake_ram: sRAM 
-        port map (	 
-            clka => cclk,
-            wea => swea1,
-            addra => saddra1,
-            dina => sdina1,
-            douta => sdouta1,
-            clkb => cclk,
-            web => sweb1,
-            addrb => saddrb1,
-            dinb => sdinb1,
-            doutb => sdoutb1
+            -- Port B
+            clkb    => cClk,
+            web     => gWenB,
+            addrb   => gAddrB,
+            dinb    => gDinB,
+            doutb   => gDoutB
         );
 
     snake : snake_sprite 
         port map (
-            clka    => cclk,
+            clka    => cClk,
             addra   => snake_address,
             douta   => snake_data
         );
 
     blank : blank_sprite 
         port map (
-            clka    => cclk,
+            clka    => cClk,
             addra   => blank_address,
             douta   => blank_data
         );
         
     apple : apple_sprite 
         port map (
-            clka    => cclk,
+            clka    => cClk,
             addra   => apple_address,
             douta   => apple_data
         );
 
     border : border_sprite 
         port map (
-            clka    => cclk,
+            clka    => cClk,
             addra   => border_address,
             douta   => border_data
-        );  
-     
-    counter : ireg 
-        port map (
-            d   => snake_cnt_out,
-            clk => cclk,
-            clr => btn(3),
-            flg => appleflg,
-            q   => open
-        ); 
+        );
 
     vga_controller : vga_640x480 
         port map (
-            clk    => cclk,
+            clk    => cClk,
             clr    => btn(3),
             hsync  => hsync,
             vsync  => vsync,
@@ -338,6 +314,18 @@ architecture Behavioral of gm_contrl_top is
             red         => red,
             green       => green,
             blue        => blue
-        );        
+        );
+        
+    -- DEBUGGING
+    display : x7segb8
+        port map (
+            x       => x_disp,
+            clk     => mclk,
+            clr     => btn(3),
+            a_to_g  => a_to_g,
+            an      => an,
+            dp      => dp
+        );
+    -- DEBUGGING
 
 end Behavioral;
