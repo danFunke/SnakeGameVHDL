@@ -285,7 +285,7 @@ architecture behavior of snake_controller_v2 is
 
                     when state16 =>
                         -- Eat apple -> increment score
-                        next_state <= state15;
+                        next_state <= state16_1;
 
                     when state16_1 =>
                         -- request new prn / enable lfsr
@@ -482,7 +482,8 @@ architecture behavior of snake_controller_v2 is
 
                 elsif (current_state = state17) then
                     -- GAME OVER
-
+                    null;
+                    
                     -- DEBUGGING
                     -- x <= X"DEADBEEF";
 
