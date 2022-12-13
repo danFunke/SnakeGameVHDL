@@ -8,6 +8,7 @@ entity gm_contrl_top is
         mclk    : in STD_LOGIC;
         PS2C    : in STD_LOGIC;
         PS2D    : in STD_LOGIC;
+        sw      : in STD_LOGIC_VECTOR (9 downto 0);
 
         -- Outputs
         ld      : out STD_LOGIC_VECTOR(9 downto 0);
@@ -123,6 +124,7 @@ architecture Behavioral of gm_contrl_top is
     
             keyVal  : in STD_LOGIC_VECTOR (7 downto 0);
             gDoutA  : in STD_LOGIC_VECTOR (1 downto 0);
+            seed    : in STD_LOGIC_VECTOR (9 downto 0);
     
             -- Outputs
             gAddrA  : out STD_LOGIC_VECTOR (9 downto 0);
@@ -209,6 +211,7 @@ architecture Behavioral of gm_contrl_top is
             gclk    => gClk,
             keyVal  => keyVal,
             gDoutA  => gDoutB,
+            seed    => sw,
 
             -- Outputs
             gAddrA  => gAddrB,

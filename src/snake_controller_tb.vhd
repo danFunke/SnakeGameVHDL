@@ -16,6 +16,7 @@ architecture tb of snake_controller_tb is
 
             keyVal  : in STD_LOGIC_VECTOR (7 downto 0);
             gDoutA  : in STD_LOGIC_VECTOR (1 downto 0);
+            seed    : in STD_LOGIC_VECTOR (9 downto 0);
 
             -- Outputs
             gAddrA  : out STD_LOGIC_VECTOR (9 downto 0);
@@ -51,6 +52,7 @@ architecture tb of snake_controller_tb is
     signal clr_tb           : STD_LOGIC;
     signal gClk_tb          : STD_LOGIC;
     signal keyVal_tb        : STD_LOGIC_VECTOR (7 downto 0);
+    signal sw_tb            : STD_LOGIC_VECTOR (9 downto 0);
 
     -- gRAM signals, PORT A
     signal gAddrA   : STD_LOGIC_VECTOR (9 downto 0);
@@ -78,6 +80,7 @@ architecture tb of snake_controller_tb is
 
                 keyVal => keyVal_tb,
                 gDoutA => gDoutA,
+                seed   => sw_tb,
 
                 -- Outputs
                 gAddrA => gAddrA,
@@ -124,6 +127,7 @@ architecture tb of snake_controller_tb is
             begin
                 clr_tb <= '1';
                 keyVal_tb <= X"75";
+                sw_tb <= "0000000000";
                 wait for period;
 
                 clr_tb <= '0';

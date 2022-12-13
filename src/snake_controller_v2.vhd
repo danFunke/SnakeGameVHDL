@@ -12,6 +12,7 @@ entity snake_controller_v2 is
 
         keyVal  : in STD_LOGIC_VECTOR (7 downto 0);
         gDoutA  : in STD_LOGIC_VECTOR (1 downto 0);
+        seed    : in STD_LOGIC_VECTOR (9 downto 0);
 
         -- Outputs
         gAddrA  : out STD_LOGIC_VECTOR (9 downto 0);
@@ -55,8 +56,37 @@ architecture behavior of snake_controller_v2 is
         );
     end component;
 
+    component lfsr is
+        port (
+            clk     : in STD_LOGIC;
+            clr     : in STD_LOGIC;
+            en      : in STD_LOGIC;
+            seed    : in STD_LOGIC_VECTOR (9 downto 0);
+            Q       : out STD_LOGIC_VECTOR (9 downto 0)
+        );
+    end component;
+
     -- Define internal types, signals, variables, and constants
-    type state_type is (state0, state1, state2, state3, state3_1, state4, state5, state6, state7, state8, state9, state10, state11, state12, state13, state14, state15, state15_1, state15_2, state15_3, state15_4, state16, state17, waitForgClk);
+    type state_type is (    state0, 
+                            state1, 
+                            state2, 
+                            state3, state3_1, 
+                            state4, 
+                            state5, 
+                            state6, 
+                            state7, 
+                            state8, 
+                            state9, 
+                            state10, 
+                            state11, 
+                            state12, 
+                            state13, 
+                            state14, 
+                            state15, state15_1, state15_2, state15_3, state15_4, 
+                            state16, state16_1, state16_2, state16_2_1, state16_3, state16_4, state16_5, state16_6, 
+                            state17, 
+                            waitForgClk
+                        );
     signal current_state    : state_type;
     signal next_state       : state_type;
 
@@ -83,18 +113,25 @@ architecture behavior of snake_controller_v2 is
     signal tempRegALd   : STD_LOGIC;
     signal tempRegAOut  : STD_LOGIC_VECTOR (9 downto 0);
 
+    -- TempRegB signals
+    signal tempRegBLd   : STD_LOGIC;
+    signal tempRegBout  : STD_LOGIC_VECTOR (9 downto 0);
+
     -- gRAM Signals
     signal gRAMA_WEN    : STD_LOGIC_VECTOR (0 downto 0);
     signal gRAMB_WEN    : STD_LOGIC_VECTOR (0 downto 0);
 
-    -- tempRegB Signals
-    signal tempRegBin   : STD_LOGIC_VECTOR (9 downto 0);
-    signal tempRegBout  : STD_LOGIC_VECTOR (9 downto 0);
-    signal tempRegBld   : STD_LOGIC;
-
     -- tempRegC Signals
     signal tempRegCout  : STD_LOGIC_VECTOR (1 downto 0);
     signal tempRegCld   : STD_LOGIC;
+
+    -- tempRegD Signals
+    signal tempRegDout  : STD_LOGIC_VECTOR (1 downto 0);
+    signal tempRegDld   : STD_LOGIC;
+
+    -- lfsr signals
+    signal lfsr_en      : STD_LOGIC;
+    signal lfsr_out     : STD_LOGIC_VECTOR (9 downto 0);
 
     begin
         snakeRAM : sRAM
@@ -111,7 +148,6 @@ architecture behavior of snake_controller_v2 is
                 doutb   => sDoutB
             );
 
-        -- DEBUGGING
         tempRegA : reg
             generic map (N => 10)
             port map (
@@ -125,11 +161,11 @@ architecture behavior of snake_controller_v2 is
         tempRegB : reg
             generic map (N => 10)
             port map (
-                d => tempRegBin,
-                load => tempRegBld,
-                clk => clk,
-                clr => clr,
-                q => tempRegBout
+                d       => lfsr_out,
+                load    => tempRegBLd,
+                clk     => clk,
+                clr     => clr,
+                q       => tempRegBout
             );
 
         tempRegC : reg
@@ -141,7 +177,25 @@ architecture behavior of snake_controller_v2 is
                 clr => clr,
                 q => tempRegCout
             );
-        -- DEBUGGING
+
+        tempRegD : reg
+            generic map (N => 2)
+            port map (
+                d => gDoutA,
+                load => tempRegDld,
+                clk => clk,
+                clr => clr,
+                q => tempRegDout
+            );
+
+        prng : lfsr
+            port map (
+                clk     => clk,
+                clr     => clr,
+                en      => lfsr_en,
+                seed    => seed,
+                q       => lfsr_out
+            );
 
         synch : process (clk, clr)
             begin
@@ -152,7 +206,7 @@ architecture behavior of snake_controller_v2 is
                 end if;
         end process synch;
 
-        stateTransitionTable : process (current_state, gClk, tempRegCout)
+        stateTransitionTable : process (current_state, gClk, tempRegCout, tempRegDout)
             begin
                 case current_state is
                     when state0 =>
@@ -217,20 +271,51 @@ architecture behavior of snake_controller_v2 is
                         -- Move normally
                         next_state <= state15_2;
 
-                        when state15_2 =>
+                    when state15_2 =>
                         -- Move normally
                         next_state <= state15_3;
 
-                        when state15_3 =>
+                    when state15_3 =>
                         -- Move normally
                         next_state <= state15_4;
 
-                        when state15_4 =>
+                    when state15_4 =>
                         -- Move normally
                         next_state <= waitForgClk;
 
                     when state16 =>
-                        -- Eat apple
+                        -- Eat apple -> increment score
+                        next_state <= state15;
+
+                    when state16_1 =>
+                        -- request new prn / enable lfsr
+                        next_state <= state16_2;
+                        
+                    when state16_2 =>
+                        -- clock in new prn, put it on gAddr
+                        next_state <= state16_2_1;
+
+                    when state16_2_1 =>
+                        -- put prn it on gAddr
+                        next_state <= state16_3;
+
+                    when state16_3 =>
+                        -- wait for data
+                        next_state <= state16_4;
+
+                    when state16_4 =>
+                        -- clock in contents at block address prn
+                        next_state <= state16_5;
+
+                    when state16_5 =>
+                        if (tempRegDout = "00") then
+                            next_state <= state16_6;
+                        else
+                            next_state <= state16_1;
+                        end if;
+
+                    when state16_6 =>
+                        -- write apple at block address prn
                         next_state <= state15;
 
                     when state17 =>
@@ -245,10 +330,9 @@ architecture behavior of snake_controller_v2 is
                 end case;
         end process stateTransitionTable;
 
-        stateBehaviorTable  : process (current_state, keyVal, sDoutA, tempRegAout, tempRegBout, tempRegCout)
+        stateBehaviorTable  : process (current_state, keyVal, sDoutA, tempRegAout, tempRegCout)
             -- Declare process variables
-            variable headAddressBlk : STD_LOGIC_VECTOR (9 downto 0);
-            variable tailAddressBlk : STD_LOGIC_VECTOR (9 downto 0);
+            variable score : STD_LOGIC_VECTOR (31 downto 0) := X"00000000";
 
             begin
                 -- Set default values
@@ -259,14 +343,14 @@ architecture behavior of snake_controller_v2 is
                 tempRegALd <= '0';
                 tempRegBLd <= '0';
                 tempRegCLd <= '0';
+                tempRegDLd <= '0';
 
 
                 if (current_state = state0) then
                     sAddrA <= "0000000001"; -- Put tail address on sRAM PORT A address bus
 
                     -- DEBUGGING
-                    ld <= "0000000000";
-                    x <= X"ABCDABCD";
+                    -- x <= X"ABCDABCD";
 
                 elsif (current_state = state1) then
                     -- wait for data
@@ -340,6 +424,7 @@ architecture behavior of snake_controller_v2 is
 
                 elsif (current_state = state15) then
                     -- MOVE NORMAL, start updating board at head
+                    gAddrA <= tempRegAout;
                     gDinA <= "01";
                     gRAMA_WEN <= "1";
 
@@ -359,23 +444,56 @@ architecture behavior of snake_controller_v2 is
                     gAddrA <= tempRegAout;
                     gDinA <= "00";
                     gRAMA_WEN <= "1";
-                
+
+
+                    
                 elsif (current_state = state16) then
-                    -- APPLE!
+                    -- APPLE! Increment score
+                    score := score + 1;
+
+                elsif (current_state = state16_1) then
+                    -- Request new PRN by enabling LFSR
+                    lfsr_en <= '1';
+
+                elsif (current_state = state16_2) then
+                    -- Clock new PRN into tempRegB
+                    tempRegBLd <= '1';
+
+                elsif (current_state = state16_2_1) then
+                    -- Put PRN on gAddrA
+                    gAddrA <= tempRegBout;
+
+                elsif (current_state = state16_3) then
+                    -- wait for data
+
+                elsif (current_state = state16_4) then
+                    -- Clock board data into tempRegD
+                    tempRegDLd <= '1';
+
+                elsif (current_state = state16_5) then
+                    -- decide where to go next based on contents of tempRegD
+
+                elsif (current_state = state16_6) then
+                    -- Write apple to board at address already on bus
+                    gDinA       <= "10";
+                    gRAMA_WEN   <= "1";
+
+
 
                 elsif (current_state = state17) then
                     -- GAME OVER
 
                     -- DEBUGGING
-                    ld <= "0000010010";
-                    -- x <= X"000000" & X"11";
-                    x <= X"DEADBEEF";
+                    -- x <= X"DEADBEEF";
 
                 elsif (current_state = waitForgClk) then
 
                 end if;
 
                 gWenA <= gRAMA_WEN;
+                ld <= seed;
+                x <= score;
+
         end process stateBehaviorTable;
         
 end behavior;
